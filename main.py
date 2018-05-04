@@ -8,6 +8,31 @@ import pandas as pd
 import quandl
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
+def calculate_stock_price_change(ticker, date):
+	"""
+	Params:
+	ticker: (String) company ticker
+	date: (String) Format of 2018-04-13T00:46:59Z (UTC format)
+	"""
+	# get info in right format for stock price query 
+    stock_after_date, stock_after_time = date.split('T')
+	date_arr = stock_after_date.split('-')
+	datetime_after = datetime.date(int(date_arr[0]), int(date_arr[1]), int(date_arr[2]))
+    time_arr = stock_after_time[:-1].split(':')
+    # stock market closes at 4:00 PM EST; if article published after 
+    # 16:00:00+4:00:00 = 20:00:00 UTC counts as next "day"
+    if int(time_arr[0]) >= 20:
+    	datetime_after += datetime.timedelta(1)
+	stock_before_date = (datetime_after - datetime.timedelta(1)).isoformat()
+
+
+	# get stock prices before and after news article 
+	# output: Open  High  Low  Close Volume  Dividend  Split  Adj_Open  Adj_High  Adj_Low  Adj_Close  Adj_Volume
+	stock_before = quandl.get('EOD/'+ticker, start_date=stock_before_date, end_date=stock_before_date)['Adj_Close'].values[0]
+	stock_after = quandl.get('EOD/'+ticker, start_date=stock_after_date, end_date=stock_after_date)['Adj_Close'].values[0]
+
+	return stock_after - stock_before
+
 
 sia = SentimentIntensityAnalyzer()
 
@@ -56,25 +81,11 @@ for company in companies:
 		article_dic['publishedAt'] = article['publishedAt'] 
 		article_dic['source'] = article['source']['name']
 
-		
-		# get info in right format for stock price query 
 		comp_symb = company_symb[company].replace(".", "_").replace("-", "_")
-         stock_after_date, stock_after_time = article_dic['publishedAt'].split('T')
-		date_arr = stock_after_date.split('-')
-		datetime_after = datetime.date(int(date_arr[0]), int(date_arr[1]), int(date_arr[2]))
-         time_arr = stock_after_time[:-1].split(':')
-         # stock market closes at 4:00 PM EST; if article published after 
-         # 16:00:00+4:00:00 = 20:00:00 UTC counts as next "day"
-         if int(time_arr[0]) >= 20:
-             datetime_after += datetime.timedelta(1)
-		stock_before_date = (datetime_after - datetime.timedelta(1)).isoformat()
 
 
-		# get stock prices before and after news article 
-		# output: Open  High  Low  Close Volume  Dividend  Split  Adj_Open  Adj_High  Adj_Low  Adj_Close  Adj_Volume
-		stock_before = quandl.get('EOD/'+comp_symb, start_date=stock_before_date, end_date=stock_before_date)['Close'].values[0]
-		stock_after = quandl.get('EOD/'+comp_symb, start_date=stock_after_date, end_date=stock_after_date)['Close'].values[0]
-		article_dic['stockPriceChange'] = stock_after-stock_before
+		article_dict['stock_price_change'] = calculate_stock_price_change(comp_symb,article_dic['publishedAt'])
+		
 		
 		# append article dict to array 
 		articles_arr.append(article_dic)
