@@ -93,7 +93,6 @@ def initialize_dataframe(ticker, start_date, end_date):
 
 	# Remove the first data point because of shift
 	dataframe = dataframe.iloc[1:]
-	print(dataframe)
 	return dataframe
 
 
