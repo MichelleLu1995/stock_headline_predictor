@@ -10,7 +10,8 @@ from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
 # Params
 newsapi = NewsApiClient(api_key='cb202441f4bd4a74aa5e5326dc4eb51f')
-quandl.ApiConfig.api_key = "REidDLJ8C4pPMRMZGLnA"
+quandl.ApiConfig.api_key = "2S7d7eeL5VZrLup9pKg5"
+# extra quandl keys: 2S7d7eeL5VZrLup9pKg5
 end_date = datetime.datetime.now().isoformat()
 start_date = (datetime.datetime.now() - datetime.timedelta(days=2*365)).isoformat()
 sources = 'bbc-news,the-verge'
@@ -22,33 +23,41 @@ def main():
     companies = df['Name']
     company_symb = {}
 
-	# Iterate through companies
-	for company in companies:
+    # Iterate through companies
+    for company in companies:
 
 
         # get company ticker
         company_symb[company] = df[df['Name'] == company]['Symbol']
+        ticker = company_symb[company].values[0]
 
-        # initialize the dataframe
-        df_current = initialize_dataframe(company_symb[company], start_date, end_date)
+        try: 
+            # initialize the dataframe
+            df_current = initialize_dataframe(ticker, start_date, end_date)
+            
 
-		# Add sentiment columns in dataframe
-		df_current['Pos_t-1'] = 0
-		df_current['Neu_t-1'] = 0
-		df_current['Neg_t-1'] = 0
-
-		# Query news articles
-		dict_current = query_news_articles(company, start_date, end_date, sources)
-
-        # iterate through dates
-        for date in dict_current.keys():
-            # when you enter seniment into the dataframe, use the before date not after
-            average_sentiment_dict = calculate_sentiment(dict_current[date])
-
-			# Plug this into df current
-			df_current.loc[[date,'Pos_t-1']] = average_sentiment_dict['pos']
-			df_current.loc[[date,'Neu_t-1']] = average_sentiment_dict['neu']
-			df_current.loc[[date,'Neg_t-1']] = average_sentiment_dict['neg']
+            # Add sentiment columns in dataframe
+            df_current['Pos_t-1'] = 0
+            df_current['Neu_t-1'] = 0
+            df_current['Neg_t-1'] = 0
+    
+            # Query news articles
+            trading_dates = df_current.index
+            dict_current = query_news_articles(company, start_date, end_date, trading_dates, sources)
+    
+            # iterate through dates
+            for date in dict_current.keys():
+                # when you enter seniment into the dataframe, use the before date not after
+                average_sentiment_dict = calculate_sentiment(dict_current[date])
+    
+                # Plug this into df current
+                df_current.at[date,'Pos_t-1'] = average_sentiment_dict['pos']
+                df_current.at[date,'Neu_t-1'] = average_sentiment_dict['neu']
+                df_current.at[date,'Neg_t-1'] = average_sentiment_dict['neg']
+                
+        except:
+            print(ticker)
+            pass
 
 
 
@@ -77,27 +86,27 @@ def calculate_sentiment(sentence_arr):
 
 # return dataframe with price_t and price_t-1
 def initialize_dataframe(ticker, start_date, end_date):
-	""" Initializes a data frame for a certain ticker
-	Params:
-		ticker (String): Stock ticker to be analyzed
-		start_date (String): Start date in format of "2001-12-31"
-		end_date (String): End date in format of "2001-12-31"
-	Returns:
-		dataframe (pd.Dataframe): Dataframe with index 'Date' ,columns 'X_t' and 'X_t-1'
-	"""
+    """ Initializes a data frame for a certain ticker
+    Params:
+        ticker (String): Stock ticker to be analyzed
+        start_date (String): Start date in format of "2001-12-31"
+        end_date (String): End date in format of "2001-12-31"
+    Returns:
+        dataframe (pd.Dataframe): Dataframe with index 'Date' ,columns 'X_t' and 'X_t-1'
+    """
 
-	# Query quandl for data and make dataframe
-	dataframe = quandl.get('EOD/'+ticker, start_date=start_date, end_date=end_date)['Adj_Close']
-	dataframe = pd.Series.to_frame(dataframe)
+    # Query quandl for data and make dataframe
+    dataframe = quandl.get('EOD/'+ticker, start_date=start_date, end_date=end_date)['Adj_Close']
+    dataframe = pd.Series.to_frame(dataframe)
 
-	# Make columns of dataframe
-	dataframe.columns = ['X_t']
-	dataframe['X_t-1'] = dataframe['X_t'].shift(1)
+    # Make columns of dataframe
+    dataframe.columns = ['X_t']
+    dataframe['X_t-1'] = dataframe['X_t'].shift(1)
 
-	# Remove the first data point because of shift
-	dataframe = dataframe.iloc[1:]
+    # Remove the first data point because of shift
+    dataframe = dataframe.iloc[1:]
 
-	return dataframe
+    return dataframe
 
 # query the news articles for the entire time frame and split by dates 
 # returns dictionary of key-value pairs where key is trading date in 
@@ -142,16 +151,13 @@ def query_news_articles(company, start_date, end_date, trading_dates, sources):
         trading_datetime = publish_datetime
         if int(time_arr[0]) >= 20:
             trading_datetime += datetime.timedelta(1)
-#        trading_date = (trading_datetime).isoformat()
         
         # if given trading_date invalid (ie if article published on Friday 
         # after market close, Saturday, or Sunday before 4 pm est) push trading_date
         # to the following Monday (ie first valid trading_date)
         while trading_datetime not in trading_dates:
             trading_datetime += datetime.timedelta(1)
-#            trading_date = (trading_datetime).isoformat()
         company_dict[trading_datetime].append(headline)
     return company_dict
 
-current_df = initialize_dataframe('MSFT', start_date, end_date)
 
