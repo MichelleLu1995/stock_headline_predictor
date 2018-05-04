@@ -43,3 +43,4 @@ def initialize_dataframe(ticker):
 def query_news_articles(company):
 	company_dict = {}
 	return company_dic
+
