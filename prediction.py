@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from newsapi import NewsApiClient
-from pandas_datareader import data
+import pandas_datareader.data as web
 import datetime
 import numpy as np
 import pandas as pd
@@ -31,11 +31,11 @@ def main():
         company_symb[company] = df[df['Name'] == company]['Symbol']
         ticker = company_symb[company].values[0]
 
-        try: 
+        try:
             # initialize the dataframe
             df_current = initialize_dataframe(ticker, start_date, end_date)
             
-
+    
             # Add sentiment columns in dataframe
             df_current['Pos_t-1'] = 0
             df_current['Neu_t-1'] = 0
@@ -54,10 +54,11 @@ def main():
                 df_current.at[date,'Pos_t-1'] = average_sentiment_dict['pos']
                 df_current.at[date,'Neu_t-1'] = average_sentiment_dict['neu']
                 df_current.at[date,'Neg_t-1'] = average_sentiment_dict['neg']
-                
+            print(ticker, 'success')
         except:
-            print(ticker)
+            print(ticker, 'failed')
             pass
+                
 
 
 
@@ -96,8 +97,17 @@ def initialize_dataframe(ticker, start_date, end_date):
     """
 
     # Query quandl for data and make dataframe
-    dataframe = quandl.get('EOD/'+ticker, start_date=start_date, end_date=end_date)['Adj_Close']
+#    dataframe = quandl.get('EOD/'+ticker, start_date=start_date, end_date=end_date)['Adj_Close']
+    start_date_arr = start_date[:10].split('-')
+    end_date_arr = end_date[:10].split('-')
+    
+    start_date = datetime.date(int(start_date_arr[0]), int(start_date_arr[1]), int(start_date_arr[2]))
+    end_date = datetime.date(int(end_date_arr[0]), int(end_date_arr[1]), int(end_date_arr[2]))
+    dataframe = web.DataReader(ticker, 'morningstar', 
+                               start_date, end_date)['Close']
+    
     dataframe = pd.Series.to_frame(dataframe)
+    dataframe.reset_index(level=0, drop=True, inplace=True)
 
     # Make columns of dataframe
     dataframe.columns = ['X_t']
