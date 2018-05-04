@@ -67,6 +67,7 @@ def calculate_sentiment(sentence_arr):
 
 # return dataframe with price_t and price_t-1
 def initialize_dataframe(ticker, start_date, end_date):
+<<<<<<< HEAD
     """ Initializes a data frame for a certain ticker
     Params:
         ticker (String): Stock ticker to be analyzed
@@ -95,6 +96,29 @@ def initialize_dataframe(ticker, start_date, end_date):
     # Remove the first data point because of shift
     dataframe = dataframe.iloc[1:]
     return dataframe
+=======
+	""" Initializes a data frame for a certain ticker
+	Params:
+		ticker (String): Stock ticker to be analyzed
+		start_date (String): Start date in format of "2001-12-31"
+		end_date (String): End date in format of "2001-12-31"
+	Returns:
+		dataframe (pd.Dataframe): Dataframe with index 'Date' ,columns 'X_t' and 'X_t-1'
+	"""
+
+	# Query quandl for data and make dataframe
+	dataframe = quandl.get('EOD/'+ticker, start_date=start_date, end_date=end_date)['Adj_Close']
+	dataframe = pd.Series.to_frame(dataframe)
+
+	# Make columns of dataframe
+	dataframe.columns = ['X_t']
+	dataframe['X_t-1'] = dataframe['X_t'].shift(1)
+
+	# Remove the first data point because of shift
+	dataframe = dataframe.iloc[1:]
+	
+	return dataframe
+>>>>>>> 47e844e919d6322ad0dd3f002a42b4a0056739ce
 
 
 # query the news articles for the entire time frame and split by dates 
