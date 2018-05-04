@@ -10,9 +10,15 @@ from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
 def calculate_stock_price_change(ticker, date):
 	"""
+	Calculated the percent change of the stock based on it's ticker and it's date. Note
+	that we use the previous day or next day depending on the hour of release.
+
 	Params:
 	ticker: (String) company ticker
 	date: (String) Format of 2018-04-13T00:46:59Z (UTC format)
+
+	Returns:
+		percent_change (float) Percent change calculated
 	"""
 	# get info in right format for stock price query 
     stock_after_date, stock_after_time = date.split('T')
@@ -31,7 +37,8 @@ def calculate_stock_price_change(ticker, date):
 	stock_before = quandl.get('EOD/'+ticker, start_date=stock_before_date, end_date=stock_before_date)['Adj_Close'].values[0]
 	stock_after = quandl.get('EOD/'+ticker, start_date=stock_after_date, end_date=stock_after_date)['Adj_Close'].values[0]
 
-	return stock_after - stock_before
+	percent_change = (stock_after - stock_before) / stock_before
+	return percent_change
 
 
 sia = SentimentIntensityAnalyzer()
