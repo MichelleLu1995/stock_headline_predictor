@@ -75,16 +75,8 @@ def initialize_dataframe(ticker, start_date, end_date):
 		dataframe (pd.Dataframe): Dataframe with index 'Date' ,columns 'X_t' and 'X_t-1'
 	"""
 
-	# Convert start_date and end_date into a string
-	start_date_day, start_date_hours = start_date.split('T')
-	start_date_arr = start_date_day.split('-')
-	start_date_string = datetime.date(int(start_date_arr[0]), int(start_date_arr[1]), int(start_date_arr[2]))
-	end_date_day, end_date_hours = end_date.split('T')
-	end_date_arr = end_date_day.split('-')
-	end_date_string = datetime.date(int(end_date_arr[0]), int(end_date_arr[1]), int(end_date_arr[2]))
-
 	# Query quandl for data and make dataframe
-	dataframe = quandl.get('EOD/'+ticker, start_date=start_date_string, end_date=end_date_string)['Adj_Close']
+	dataframe = quandl.get('EOD/'+ticker, start_date=start_date, end_date=end_date)['Adj_Close']
 	dataframe = pd.Series.to_frame(dataframe)
 
 	# Make columns of dataframe
@@ -93,6 +85,7 @@ def initialize_dataframe(ticker, start_date, end_date):
 
 	# Remove the first data point because of shift
 	dataframe = dataframe.iloc[1:]
+	
 	return dataframe
 
 
