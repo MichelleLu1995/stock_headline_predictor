@@ -22,7 +22,6 @@ def main():
 	companies = df['Name']
 	company_symb = {}
 
-
 	# Iterate through companies
 	for company in companies:
 
@@ -31,6 +30,11 @@ def main():
 
 		# initialize the dataframe
 		df_current = initialize_dataframe(company_symb[company], start_date, end_date)
+
+		# Add sentiment columns in dataframe
+		df_current['Pos_t-1'] = 0
+		df_current['Neu_t-1'] = 0
+		df_current['Neg_t-1'] = 0
 
 		# Query news articles
 		dict_current = query_news_articles(company, start_date, end_date, sources)
@@ -41,6 +45,11 @@ def main():
 			average_sentiment_dict = calculate_sentiment(dict_current[date])
 
 			# Plug this into df current
+			df_current.loc[[date,'Pos_t-1']] = average_sentiment_dict['pos']
+			df_current.loc[[date,'Neu_t-1']] = average_sentiment_dict['neu']
+			df_current.loc[[date,'Neg_t-1']] = average_sentiment_dict['neg']
+
+
 
 		# Regression
 
@@ -85,7 +94,7 @@ def initialize_dataframe(ticker, start_date, end_date):
 
 	# Remove the first data point because of shift
 	dataframe = dataframe.iloc[1:]
-	
+
 	return dataframe
 
 
@@ -106,6 +115,4 @@ def query_news_articles(company, start_date, end_date, sources):
 	"""
 	company_dict = {}
 	return company_dic
-
-initialize_dataframe('MSFT', start_date, end_date)
 
