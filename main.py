@@ -52,16 +52,21 @@ for company in companies:
 		description = article['description']
 		article_dic['description'] = description
 		article_dic['description_score'] = sia.polarity_scores(description)
-		# format of date is 2018-04-13T00:46:59Z
+		# format of date is 2018-04-13T00:46:59Z (UTC format)
 		article_dic['publishedAt'] = article['publishedAt'] 
 		article_dic['source'] = article['source']['name']
 
 		
 		# get info in right format for stock price query 
 		comp_symb = company_symb[company].replace(".", "_").replace("-", "_")
-		stock_after_date = article_dic['publishedAt'][:10]
-		date_arr = stock_before_date.split('-')
+         stock_after_date, stock_after_time = article_dic['publishedAt'].split('T')
+		date_arr = stock_after_date.split('-')
 		datetime_after = datetime.date(int(date_arr[0]), int(date_arr[1]), int(date_arr[2]))
+         time_arr = stock_after_time[:-1].split(':')
+         # stock market closes at 4:00 PM EST; if article published after 
+         # 16:00:00+4:00:00 = 20:00:00 UTC counts as next "day"
+         if int(time_arr[0]) >= 20:
+             datetime_after += datetime.timedelta(1)
 		stock_before_date = (datetime_after - datetime.timedelta(1)).isoformat()
 
 
