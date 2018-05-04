@@ -44,10 +44,6 @@ def main():
 
 		# Regression
 
-
-
-# calculate the sentiment of the headline or description
-# calculate average sentiment 
 def calculate_sentiment(sentence_arr):
 	""" Returns the average sentiment of the array
 	Params:
@@ -58,9 +54,14 @@ def calculate_sentiment(sentence_arr):
 		format of score is {'neg': 0.0, 'neu': 1.0, 'pos': 0.0, 'compound': 0.0}
 	"""
 	sia = SentimentIntensityAnalyzer()
-	# this is for once sentence 
-	# sentiment = sia.polarity_scores(sentence)
-	return sentiment 
+	df = df = pd.DataFrame(columns=['neg','neu','pos','compound'])
+	for sentence in sentence_arr:
+		sentiment = sia.polarity_scores(sentence)
+		df_sentiment = pd.DataFrame([sentiment], columns=sentiment.keys())
+		df = df.append(df_sentiment)
+	
+	avg_sentiment = dict(df.mean())	
+	return avg_sentiment 
 
 
 # return dataframe with price_t and price_t-1
