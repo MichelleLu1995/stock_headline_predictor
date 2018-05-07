@@ -19,9 +19,9 @@ newsdata = api.search(q=company,
 
 articles = newsdata['response']['docs']
 for article in articles:
-	print(x['headline'])
-	print(x['pub_date'])
-	print(x['snippet'])
+	print(article['headline'])
+	print(article['pub_date'])
+	print(article['snippet'])
 
 	headline = article['headline']
 
