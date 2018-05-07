@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link rel="stylesheet" href="../static/css/styles.css">
+  <!-- <meta http-equiv="Content-Type" content="text/html;charset=utf-8"> -->
+  <script src="../static/js/search.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.6-rc.0/css/select2.min.css" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.6-rc.0/js/select2.min.js"></script>
+</head>
+
+<body>
+    <div id="content">
+      <h1>Stock Prediction Based On News Headlines</h1>
+      <div id="searchfield">
+        <form action ="{{ url_for('searchCompany') }}" method="POST">
+          <select class="js-example-basic-single" id="selectComp" style="width: 75%;" name="company" method="POST">
+        </select>
+        <div id="company_arr" style="display: none;">{{company_arr}}</div>
+         <input type="submit" id="searchButton" value="Predict">
+       </form>
+      </div>
+    </div>
+
+<script>
+var companies = document.getElementById("company_arr").innerHTML;
+companies = companies.slice(0,-1);
+companies = companies.split(",");
+var x = document.getElementById("selectComp");
+for (i=0; i<companies.length; i++){
+  var option = document.createElement("option");
+  company = companies[i].slice(2,-1);
+  option.text = company;
+  option.value = company;
+  x.add(option);
+}
+
+$('.js-example-basic-single').select2({
+    placeholder: "Select a comnpany",
+    allowClear: true,
+  });
+
+</script>
+</body>
+</html>
