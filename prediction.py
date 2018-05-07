@@ -10,11 +10,14 @@ from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
 # Params
 newsapi = NewsApiClient(api_key='cb202441f4bd4a74aa5e5326dc4eb51f')
+# extra newsapi keys: 188a7490bd6642efb757f93cddd00d2b, 6b33fffeb4cb463f9908694d4be3a532
 quandl.ApiConfig.api_key = "2S7d7eeL5VZrLup9pKg5"
-# extra quandl keys: 2S7d7eeL5VZrLup9pKg5
 end_date = datetime.datetime.now().isoformat()
 start_date = (datetime.datetime.now() - datetime.timedelta(days=2*365)).isoformat()
-sources = 'bbc-news,the-verge'
+left_sources = 'the-new-york-times,the-washington-post'
+right_sources = 'fox-news,breitbart-news'
+center_sources = 'bbc-news,associated-press,the-wall-street-journal,usa-today'
+all_sources = left_sources + ',' + right_sources + ',' + center_sources
 # domain
 
 def main():
@@ -24,9 +27,10 @@ def main():
     company_symb = {}
 
     # Iterate through companies
-    for company in companies:
+    # for company in companies:
+    for i in range(0,1):
 
-
+        company = companies.loc[i]
         # get company ticker
         company_symb[company] = df[df['Name'] == company]['Symbol']
         ticker = company_symb[company].values[0]
@@ -43,8 +47,9 @@ def main():
     
             # Query news articles
             trading_dates = df_current.index
-            dict_current = query_news_articles(company, start_date, end_date, trading_dates, sources)
+            dict_current = query_news_articles(company, start_date, end_date, trading_dates, sources=all_sources)
     
+            print(dict_current)
             # iterate through dates
             for date in dict_current.keys():
                 # when you enter seniment into the dataframe, use the before date not after
@@ -54,11 +59,11 @@ def main():
                 df_current.at[date,'Pos_t-1'] = average_sentiment_dict['pos']
                 df_current.at[date,'Neu_t-1'] = average_sentiment_dict['neu']
                 df_current.at[date,'Neg_t-1'] = average_sentiment_dict['neg']
-            print(ticker, 'success')
+            print(i, ticker, 'success')
+            df_current.to_csv('./data/'+ticker+'.csv')
         except:
-            print(ticker, 'failed')
+            print(i, ticker, 'failed')
             pass
-                
 
 
 
@@ -135,39 +140,41 @@ def query_news_articles(company, start_date, end_date, trading_dates, sources):
     Returns:
         company_dic (dictionary): keys are date, values are array of headlines
     """
-    company_dict = dict.fromkeys(trading_dates.date,[])
-    newsdata = newsapi.get_everything(q=company,
-                                      sources=sources,
-                                      from_param=start_date,
-                                      to=end_date,
-                                      language='en',
-                                      sort_by='relevancy',
-                                      page=2)
+    company_dict = {k: [] for k in trading_dates.date}
+    for page_num in range(1,11):
+        newsdata = newsapi.get_everything(q=company,
+                                          sources=sources,
+                                          from_param=start_date,
+                                          to=end_date,
+                                          language='en',
+                                          sort_by='relevancy',
+                                          page_size=100,
+                                          page=page_num)
     
-    articles = newsdata['articles']
-    for article in articles:
-        headline = article['title']
-        # description = article['description']
-        # format of date is 2018-04-13T00:46:59Z (UTC format)
-        publish_date = article['publishedAt'] 
-        # adjust date for trading day
-        publish_date, publish_time = publish_date.split('T')
-        date_arr = publish_date.split('-')
-        publish_datetime = datetime.date(int(date_arr[0]), int(date_arr[1]), int(date_arr[2]))
-        time_arr = publish_time[:-1].split(':')
-        # stock market closes at 4:00 PM EST; if article published after 
-        # 16:00:00+4:00:00 = 20:00:00 UTC headline affects next trading day;
-        # otherwise affects current trading day
-        trading_datetime = publish_datetime
-        if int(time_arr[0]) >= 20:
-            trading_datetime += datetime.timedelta(1)
-        
-        # if given trading_date invalid (ie if article published on Friday 
-        # after market close, Saturday, or Sunday before 4 pm est) push trading_date
-        # to the following Monday (ie first valid trading_date)
-        while trading_datetime not in trading_dates:
-            trading_datetime += datetime.timedelta(1)
-        company_dict[trading_datetime].append(headline)
+        articles = newsdata['articles']
+        for article in articles:
+            headline = article['title']
+            # description = article['description']
+            # format of date is 2018-04-13T00:46:59Z (UTC format)
+            publish_date = article['publishedAt'] 
+            # adjust date for trading day
+            publish_date, publish_time = publish_date.split('T')
+            date_arr = publish_date.split('-')
+            publish_datetime = datetime.date(int(date_arr[0]), int(date_arr[1]), int(date_arr[2]))
+            time_arr = publish_time[:-1].split(':')
+            # stock market closes at 4:00 PM EST; if article published after 
+            # 16:00:00+4:00:00 = 20:00:00 UTC headline affects next trading day;
+            # otherwise affects current trading day
+            trading_datetime = publish_datetime
+            if int(time_arr[0]) >= 20:
+                trading_datetime += datetime.timedelta(1)
+            
+            # if given trading_date invalid (ie if article published on Friday 
+            # after market close, Saturday, or Sunday before 4 pm est) push trading_date
+            # to the following Monday (ie first valid trading_date)
+            while trading_datetime not in trading_dates:
+                trading_datetime += datetime.timedelta(1)
+            company_dict[trading_datetime].append(headline)
     return company_dict
 
 
