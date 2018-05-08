@@ -10,11 +10,12 @@ import quandl
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
 # Params
-newsapi = NewsApiClient(api_key='cb202441f4bd4a74aa5e5326dc4eb51f')
-# extra newsapi keys: c91a676aeaef40fd844409c8b0bef485, 6b33fffeb4cb463f9908694d4be3a532
-# api = articleAPI("188a7490bd6642efb757f93cddd00d2b")
+# newsapi = NewsApiClient(api_key='cb202441f4bd4a74aa5e5326dc4eb51f')
+# extra newsapi keys: 188a7490bd6642efb757f93cddd00d2b, 6b33fffeb4cb463f9908694d4be3a532
+api = articleAPI("c91a676aeaef40fd844409c8b0bef485")
+
 quandl.ApiConfig.api_key = "2S7d7eeL5VZrLup9pKg5"
-end_date = (datetime.datetime.now() - datetime.timedelta(days=3)).isoformat()
+end_date = (datetime.datetime.now()-datetime.timedelta(3)).isoformat()
 start_date = (datetime.datetime.now() - datetime.timedelta(days=2*365)).isoformat()
 left_sources = 'the-new-york-times,the-washington-post'
 right_sources = 'fox-news,breitbart-news'
@@ -40,6 +41,7 @@ def main():
         # initialize the dataframe
         df_current = initialize_dataframe(ticker, start_date, end_date)
 
+
         # Add sentiment columns in dataframe
         df_current['Pos_t-1'] = 0
         df_current['Neu_t-1'] = 0
@@ -64,6 +66,7 @@ def main():
 
             # print(i, ticker, 'failed')
             # pass
+
 
 
 
