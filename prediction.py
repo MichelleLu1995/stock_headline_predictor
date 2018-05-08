@@ -13,8 +13,9 @@ from nltk.sentiment.vader import SentimentIntensityAnalyzer
 # newsapi = NewsApiClient(api_key='cb202441f4bd4a74aa5e5326dc4eb51f')
 # extra newsapi keys: 188a7490bd6642efb757f93cddd00d2b, 6b33fffeb4cb463f9908694d4be3a532
 api = articleAPI("c91a676aeaef40fd844409c8b0bef485")
+
 quandl.ApiConfig.api_key = "2S7d7eeL5VZrLup9pKg5"
-end_date = datetime.datetime.now().isoformat()
+end_date = (datetime.datetime.now()-datetime.timedelta(3)).isoformat()
 start_date = (datetime.datetime.now() - datetime.timedelta(days=2*365)).isoformat()
 left_sources = 'the-new-york-times,the-washington-post'
 right_sources = 'fox-news,breitbart-news'
@@ -30,42 +31,42 @@ def main():
 
     # Iterate through companies
     # for company in companies:
-    for i in range(0,1):
+    for i in range(30,31):
 
         company = companies.loc[i]
         # get company ticker
         company_symb[company] = df[df['Name'] == company]['Symbol']
         ticker = company_symb[company].values[0]
 
-        try:
-            # initialize the dataframe
-            df_current = initialize_dataframe(ticker, start_date, end_date)
-            
-    
-            # Add sentiment columns in dataframe
-            df_current['Pos_t-1'] = 0
-            df_current['Neu_t-1'] = 0
-            df_current['Neg_t-1'] = 0
-    
-            # Query news articles
-            trading_dates = df_current.index
-            dict_current = query_news_articles(company, start_date, end_date, trading_dates, sources=all_sources)
-    
-            print(dict_current)
-            # iterate through dates
-            for date in dict_current.keys():
-                # when you enter seniment into the dataframe, use the before date not after
-                average_sentiment_dict = calculate_sentiment(dict_current[date])
-    
-                # Plug this into df current
-                df_current.at[date,'Pos_t-1'] = average_sentiment_dict['pos']
-                df_current.at[date,'Neu_t-1'] = average_sentiment_dict['neu']
-                df_current.at[date,'Neg_t-1'] = average_sentiment_dict['neg']
-            print(i, ticker, 'success')
-            df_current.to_csv('./data/'+ticker+'.csv')
-        except:
-            print(i, ticker, 'failed')
-            pass
+#        try:
+        # initialize the dataframe
+        df_current = initialize_dataframe(ticker, start_date, end_date)
+        
+
+        # Add sentiment columns in dataframe
+        df_current['Pos_t-1'] = 0
+        df_current['Neu_t-1'] = 0
+        df_current['Neg_t-1'] = 0
+
+        # Query news articles
+        trading_dates = df_current.index
+        dict_current = query_news_articles(company, start_date, end_date, trading_dates, sources=all_sources)
+
+        print(dict_current)
+        # iterate through dates
+        for date in dict_current.keys():
+            # when you enter seniment into the dataframe, use the before date not after
+            average_sentiment_dict = calculate_sentiment(dict_current[date])
+
+            # Plug this into df current
+            df_current.at[date,'Pos_t-1'] = average_sentiment_dict['pos']
+            df_current.at[date,'Neu_t-1'] = average_sentiment_dict['neu']
+            df_current.at[date,'Neg_t-1'] = average_sentiment_dict['neg']
+        print(i, ticker, 'success')
+        df_current.to_csv('./data/'+ticker+'.csv')
+#        except:
+#            print(i, ticker, 'failed')
+#            pass
 
 
 
