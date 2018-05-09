@@ -4,23 +4,31 @@ from newsapi import NewsApiClient
 from nytimesarticle import articleAPI
 import pandas_datareader.data as web
 import datetime
+import time
 import numpy as np
 import pandas as pd
 import quandl
+import dateutil.parser
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
 # Params
-# newsapi = NewsApiClient(api_key='cb202441f4bd4a74aa5e5326dc4eb51f')
-# extra newsapi keys: 188a7490bd6642efb757f93cddd00d2b, 6b33fffeb4cb463f9908694d4be3a532
-api = articleAPI("c91a676aeaef40fd844409c8b0bef485")
+# extra API keys, comment out as necessary
+#api = articleAPI("b23351c6f9314694bfe4f4929a2b72c5") 
+#api = articleAPI("787bd4db8e704bbf9cebe8b7941827e0") 
+#api = articleAPI("f8b402f42ed14b249fd5accc95a050dd") 
+#api = articleAPI("c91a676aeaef40fd844409c8b0bef485")
+#api = articleAPI("c43133d654134109868299ff505e7c55")
+#api = articleAPI("eb427ebc2336423ead4d350cfa4e900b")
+#api = articleAPI("b538de93f1a9459da22b150d7b53cb6f")
+api = articleAPI("88f587ed149d4478b4490168d61ed9dc")
 
 quandl.ApiConfig.api_key = "2S7d7eeL5VZrLup9pKg5"
-end_date = (datetime.datetime.now()-datetime.timedelta(3)).isoformat()
+end_date = (datetime.datetime.now()-datetime.timedelta(days=3)).isoformat()
 start_date = (datetime.datetime.now() - datetime.timedelta(days=2*365)).isoformat()
-left_sources = 'the-new-york-times,the-washington-post'
-right_sources = 'fox-news,breitbart-news'
-center_sources = 'bbc-news,associated-press,the-wall-street-journal,usa-today'
-all_sources = left_sources + ',' + right_sources + ',' + center_sources
+left_sources = 'The New York Times'
+right_sources = 'Fox News'
+center_sources = 'Reuters AP The Wall Street Journal'
+all_sources = left_sources + ' ' + right_sources + ' ' + center_sources
 # domain
 
 def main():
@@ -31,12 +39,15 @@ def main():
 
     # Iterate through companies
     # for company in companies:
-    for i in range(30,31):
+    for i in range(73,74):
 
-        company = companies.loc[i]
+#        company = companies.loc[i]
         # get company ticker
-        company_symb[company] = df[df['Name'] == company]['Symbol']
-        ticker = company_symb[company].values[0]
+#        company_symb[company] = df[df['Name'] == company]['Symbol']
+        company = 'Apple'
+        company_symb[company] = 'AAPL'
+        ticker = company_symb[company]
+#        ticker = company_symb[company].values[0]
 
         # initialize the dataframe
         df_current = initialize_dataframe(ticker, start_date, end_date)
@@ -64,9 +75,10 @@ def main():
         print(i, ticker, 'success')
         df_current.to_csv('./data/'+ticker+'.csv')
 
-            # print(i, ticker, 'failed')
-            # pass
-
+        
+#        except:
+#            print(i, ticker, 'failed')
+#            pass
 
 
 
@@ -199,40 +211,63 @@ def query_news_articles(company, start_date, end_date, trading_dates, sources):
         company_dic (dictionary): keys are date, values are array of headlines
     """
     company_dict = {k: [] for k in trading_dates.date}
-    for page_num in range(1,11):
-        newsdata = newsapi.get_everything(q=company,
-                                          sources=sources,
-                                          from_param=start_date,
-                                          to=end_date,
-                                          language='en',
-                                          sort_by='relevancy',
-                                          page_size=100,
-                                          page=page_num)
+    start_date = int(start_date.replace("-","").split('T')[0])
+    ending_date = (dateutil.parser.parse(end_date)-datetime.timedelta(days=1)).isoformat()
+    end_date = int(ending_date.replace("-","").split('T')[0])
+    newsdata = api.search(q=company, begin_date = start_date,
+                           end_date = end_date,
+                          fq='headline:('+company+ ') OR body:('+company+') AND source:(' + sources + ')',
+                          page = 0,
+                          facet_filter = True)
+                               
+
+    #print(newsdata) # newsdata is full HTTP response
+    number_of_hits = newsdata['response']['meta']['hits']
+    print(number_of_hits)
+    number_of_pages = (number_of_hits // 10) + 1
     
-        articles = newsdata['articles']
+    time.sleep(2)
+    # page through results and add headlines to companY_dict
+    for i in range(0, min(number_of_pages,200)):
+        print('page', i)
+        newsdata = api.search(q=company, begin_date = start_date,
+                           end_date = end_date,
+                          fq='headline:('+company+ ') OR body:('+company+') AND source:(' + sources + ')',
+                          page = i,
+                          facet_filter = True)
+        articles = newsdata['response']['docs']
         for article in articles:
-            headline = article['title']
-            # description = article['description']
-            # format of date is 2018-04-13T00:46:59Z (UTC format)
-            publish_date = article['publishedAt'] 
-            # adjust date for trading day
-            publish_date, publish_time = publish_date.split('T')
-            date_arr = publish_date.split('-')
-            publish_datetime = datetime.date(int(date_arr[0]), int(date_arr[1]), int(date_arr[2]))
-            time_arr = publish_time[:-1].split(':')
-            # stock market closes at 4:00 PM EST; if article published after 
-            # 16:00:00+4:00:00 = 20:00:00 UTC headline affects next trading day;
-            # otherwise affects current trading day
-            trading_datetime = publish_datetime
-            if int(time_arr[0]) >= 20:
-                trading_datetime += datetime.timedelta(1)
+            relevance = article['score']
+            if relevance >= 0.005: 
+                headline = article['headline']['main']
+                blurb = article['snippet']
+    #            print(article['pub_date'], '\t', article['headline']['main'])
             
-            # if given trading_date invalid (ie if article published on Friday 
-            # after market close, Saturday, or Sunday before 4 pm est) push trading_date
-            # to the following Monday (ie first valid trading_date)
-            while trading_datetime not in trading_dates:
-                trading_datetime += datetime.timedelta(1)
-            company_dict[trading_datetime].append(headline)
+                # description = article['description']
+                # format of date is 2018-04-13T00:46:59Z (UTC format)
+                publish_date = article['pub_date'] 
+                print(publish_date)
+                # adjust date for trading day
+                publish_date, publish_time = publish_date.split('T')
+                date_arr = publish_date.split('-')
+                publish_datetime = datetime.date(int(date_arr[0]), int(date_arr[1]), int(date_arr[2]))
+                time_arr = publish_time[:-1].split(':')
+                # stock market closes at 4:00 PM EST; if article published after 
+                # 16:00:00+4:00:00 = 20:00:00 UTC headline affects next trading day;
+                # otherwise affects current trading day
+                trading_datetime = publish_datetime
+                if int(time_arr[0]) >= 20:
+                    trading_datetime += datetime.timedelta(days=1)
+                
+                # if given trading_date invalid (ie if article published on Friday 
+                # after market close, Saturday, or Sunday before 4 pm est) push trading_date
+                # to the following Monday (ie first valid trading_date)
+                while trading_datetime not in trading_dates:
+                    trading_datetime += datetime.timedelta(1)
+                company_dict[trading_datetime].append(headline)
+                company_dict[trading_datetime].append(blurb)
+        time.sleep(1)
+        
     return company_dict
 
 main()
