@@ -25,9 +25,10 @@
 </head>
 
 <body>
-    <div id="content">
+	<a class="button" id="back" href="{{ url_for('main') }}">Back</a>
+    <div>
       <h1> {{ company }} </h1>
-      <p style="text-align: center; font-weight: bold; font-size: 1.5em">Suggestion: {{ suggestion }} !! </p>
+      <p style="text-align: center; font-weight: bold; font-size: 1.5em; color:#82CAFA;">Suggestion: {{ suggestion }} !! </p>
       <div class="row">
 		  <div class="column">
 		    <h2>Today's Closing Price</h2>

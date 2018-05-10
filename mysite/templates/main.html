@@ -15,9 +15,10 @@
       <div id="searchfield">
         <form action ="{{ url_for('searchCompany') }}" method="POST">
           <select class="js-example-basic-single" id="selectComp" style="width: 75%;" name="company" method="POST">
+            <option></option>
         </select>
         <div id="company_arr" style="display: none;">{{company_arr}}</div>
-         <input type="submit" id="searchButton" value="Predict">
+         <input class="button" type="submit" id="searchButton" value="Predict">
        </form>
       </div>
     </div>
@@ -36,7 +37,7 @@ for (i=0; i<companies.length; i++){
 }
 
 $('.js-example-basic-single').select2({
-    placeholder: "Select a comnpany",
+    placeholder: "Search a comnpany",
     allowClear: true,
   });
 
