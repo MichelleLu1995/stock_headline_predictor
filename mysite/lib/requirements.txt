@@ -1,0 +1,10 @@
+Flask=0.10
+Werkzeug<0.13.0,>=0.12.0
+nltk
+pandas
+statsmodels
+sklearn.model_selection
+nytimesarticle
+numpy 
+quandl
+newsapi

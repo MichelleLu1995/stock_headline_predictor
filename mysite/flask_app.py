@@ -16,6 +16,7 @@ from statsmodels.tsa.ar_model import AR
 from sklearn.model_selection import TimeSeriesSplit
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.linear_model import LinearRegression
+from google.appengine.ext import vendor
 
 app = Flask(__name__)
 app.config["DEBUG"] = True
