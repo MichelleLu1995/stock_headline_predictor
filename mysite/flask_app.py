@@ -24,12 +24,12 @@ app.config["DEBUG"] = True
 # extra API keys, comment out as necessary
 #api = articleAPI("b23351c6f9314694bfe4f4929a2b72c5") 
 #api = articleAPI("787bd4db8e704bbf9cebe8b7941827e0") 
-#api = articleAPI("f8b402f42ed14b249fd5accc95a050dd") 
+api = articleAPI("f8b402f42ed14b249fd5accc95a050dd") 
 #api = articleAPI("c91a676aeaef40fd844409c8b0bef485")
 #api = articleAPI("c43133d654134109868299ff505e7c55")
 #api = articleAPI("eb427ebc2336423ead4d350cfa4e900b")
-#api = articleAPI("b538de93f1a9459da22b150d7b53cb6f")
-api = articleAPI("88f587ed149d4478b4490168d61ed9dc")
+# api = articleAPI("b538de93f1a9459da22b150d7b53cb6f")
+# api = articleAPI("88f587ed149d4478b4490168d61ed9dc")
 
 quandl.ApiConfig.api_key = "2S7d7eeL5VZrLup9pKg5"
 end_date = (datetime.datetime.now() - datetime.timedelta(days=3)).isoformat()
@@ -42,7 +42,9 @@ replace_list = ['Corp', 'Inc.', 'Inc', '.com', 'plc', ',', 'Co.']
 
 # get companies
 df = pd.read_csv('constituents_csv.csv')
-companies = ['Amazon.com Inc.', 'Netflix Inc.', 'Alphabet Inc Class A']
+companies = ['Amazon.com', 'Facebook', 'Netflix', 'Google', 'Twitter', 'Apple', 'Twenty-First Century Fox']
+ticker_dict = {'Amazon.com': 'AMZN', 'Facebook': 'FB', 'Netflix': 'NFLX', 'Google': 'GOOGL', 'Twitter': 'TWTR', 'Apple': 'AAPL', 'Twenty-First Century Fox':'FOXA'} 
+
 # companies = df['Name'].values
 # companies = companies.tolist()
 
@@ -52,40 +54,59 @@ def main():
 
 @app.route('/company', methods=['GET', 'POST'])
 def searchCompany():
+    # get company
     company = request.form['company']
-
-    # plot dict
-    plot_dict = {}
+    ticker = ticker_dict[company]
+    prev_date = (datetime.datetime.now() - datetime.timedelta(days=3)).isoformat()
+    curr_date = datetime.datetime.now().isoformat()
 
     # create model 
     plot_dict, predict = createModel(company)
+    # print(str(curr_date)[:10])
+    # get today's stock price
+    curr_price = web.DataReader(ticker, 'morningstar', 
+                               prev_date, curr_date)['Close'].iloc[-1]
 
-    actual = 30.2
-    # predict = 44
-    if predict > actual:
-        suggestion = "Buy"
+    suggestion = {}
+    if predict['ADL'] > curr_price:
+        suggestion['ADL'] = "Buy"
     else:
-        suggestion = "Sell"
+        suggestion['ADL'] = "Sell"
 
-    return render_template("search.html", company=company, plot_dict=plot_dict, actual=actual, predict=predict, suggestion=suggestion)
+    if predict['AR'] > curr_price:
+        suggestion['AR'] = "Buy"
+    else:
+        suggestion['AR'] = "Sell"
+
+
+
+    return render_template("search.html", company=company, plot_dict=plot_dict, curr_price=curr_price, predict=predict, suggestion=suggestion)
 
 def createModel(company):
-    # get today's date and the prev day for news quert
-    curr_date = datetime.datetime.now().isoformat()
-    prev_date = (datetime.datetime.now() - datetime.timedelta(days=1)).isoformat()
-
     # query the past day's news 
     # news_dict = query_news_articles(company, prev_date, curr_date, trading_dates, all_sources)
       
     # get company ticker
-    ticker = df[df['Name'] == company]['Symbol'].values[0]
+    # ticker = df[df['Name'] == company]['Symbol'].values[0]
+    ticker = ticker_dict[company]
 
     # create model
     MSE_list_AR, MSE_list_ADL, intercept_AR, intercept_ADL, coef_AR, coef_ADL,\
                best_AR_train_index, best_AR_test_index, best_ADL_train_index, best_ADL_test_index = main_read_in_csv(ticker)
+    # AR model
     model_AR = LinearRegression(normalize=True)
     model_AR.intercept_ = intercept_AR
     model_AR.coef_ = coef_AR
+
+    # ADL model
+    model_ADL = LinearRegression(normalize=True)
+    model_ADL.intercept_ = intercept_ADL
+    model_ADL.coef_ = coef_ADL
+
+    # predict values for tomorrow  
+    prediction = {}
+    prediction['AR'] = predict_next_value(ticker, company, model_AR, is_ADL=False)
+    prediction['ADL'] = predict_next_value(ticker, company,model_ADL, is_ADL=True)
 
     plot_AR = plot_AR_model(ticker, best_ADL_train_index, best_ADL_test_index, best_AR_train_index, best_AR_test_index)
     plot_ADL = plot_ADL_model(ticker, best_ADL_train_index, best_ADL_test_index, best_AR_train_index, best_AR_test_index)
@@ -102,31 +123,7 @@ def createModel(company):
     plot_dict['comp_ADL_actual'] = plot_ADL['y_actual']
     plot_dict['comp_ADL_predict'] = plot_ADL['y_predict']
 
-    # make prediction
-    df_master = pd.read_csv('../data/'+ticker+'.csv',index_col='Date')
-    # Query news articles
-    trading_dates = df_master.index
-    print("trading", trading_dates)
-    Y_pred = 0
-    # dict_master = query_news_articles(company, prev_date, curr_date, trading_dates, sources=all_sources)
-    # # Add sentiment columns in dataframe
-    # df_master['Pos_t-1'] = 0
-    # df_master['Neu_t-1'] = 0
-    # df_master['Neg_t-1'] = 0
-
-    # # iterate through dates
-    # for date in dict_master.keys():
-    #     # when you enter seniment into the dataframe, use the before date not after
-    #     average_sentiment_dict = calculate_sentiment(dict_master[date])
-
-    #     # Plug this into df
-    #     df_master.at[date,'Pos_t-1'] = average_sentiment_dict['pos']
-    #     df_master.at[date,'Neu_t-1'] = average_sentiment_dict['neu']
-    #     df_master.at[date,'Neg_t-1'] = average_sentiment_dict['neg']
-    # X = df.loc[:, df.columns !='X_t']
-    # Y_pred = model_AR.predict(X)
-
-    return plot_dict, Y_pred
+    return plot_dict, prediction
 
 def calculate_sentiment(sentence_arr):
     """ Returns the average sentiment of the array
@@ -147,7 +144,7 @@ def calculate_sentiment(sentence_arr):
     avg_sentiment = dict(df.mean())    
     return avg_sentiment 
 
-def query_news_articles(company, start_date, end_date, trading_dates, sources):
+def query_news_articles(company, start_date, end_date, trading_dates, sources, pred=False):
     """ Queries news article for a certain time frame and split it by dates
         Note that
     Params:
@@ -157,6 +154,7 @@ def query_news_articles(company, start_date, end_date, trading_dates, sources):
          trading_dates (Array of Strings): Array of dates when the market was open
                  dates in format of "2001-12-31"
         sources (Array of Strings): Array of different news sources
+        pred (Boolean): Whether we are querying for predictions or not
     Returns:
         company_dic (dictionary): keys are date, values are array of headlines
     """
@@ -178,7 +176,7 @@ def query_news_articles(company, start_date, end_date, trading_dates, sources):
     time.sleep(1)
     # page through results and add headlines to companY_dict
     for i in range(0, min(number_of_pages,100)):
-        # print('page', i)
+        print('page', i)
         newsdata = api.search(q=company, begin_date = start_date,
                            end_date = end_date,
                           fq='headline:('+company+ ') OR body:('+company+') AND source:(' + sources + ')',
@@ -187,7 +185,7 @@ def query_news_articles(company, start_date, end_date, trading_dates, sources):
         articles = newsdata['response']['docs']
         for article in articles:
             relevance = article['score']
-            if relevance >= 0.005: 
+            if relevance >= 0.005 or pred: 
                 headline = article['headline']['main']
                 blurb = article['snippet']
                 # print(article['pub_date'], '\t', article['headline']['main'])
@@ -195,7 +193,7 @@ def query_news_articles(company, start_date, end_date, trading_dates, sources):
                 # description = article['description']
                 # format of date is 2018-04-13T00:46:59Z (UTC format)
                 publish_date = article['pub_date'] 
-                # print(publish_date)
+                print(publish_date)
                 # adjust date for trading day
                 publish_date, publish_time = publish_date.split('T')
                 date_arr = publish_date.split('-')
@@ -422,16 +420,6 @@ def plot_AR_model(ticker, best_ADL_train_index, best_ADL_test_index, best_AR_tra
     plot_data['x_val'] = Y_plot.index
     plot_data['y_actual'] = Y_plot['Actual']
     plot_data['y_predict'] = Y_plot['Predicted']
-
-    # plt.figure(figsize=(10,10))
-    # plt.title('Predicted Vs. Actual Plot AR model')
-    # plt.xlabel('Date')
-    # plt.ylabel('Price')
-    # plt.plot(Y_plot.index, Y_plot['Actual'], label='Actual')
-    # plt.plot(Y_plot.index, Y_plot['Predicted'],label='Predicted')
-    # plt.legend()
-
-    # plt.show()
     return plot_data
 
 def plot_ADL_model(ticker, best_ADL_train_index, best_ADL_test_index, best_AR_train_index, best_AR_test_index):
@@ -472,22 +460,65 @@ def plot_ADL_model(ticker, best_ADL_train_index, best_ADL_test_index, best_AR_tr
     Y_plot['Predicted'] = pd.Series(Y_pred, index=Y_plot.index)
     Y_plot.columns = ['Actual', 'Predicted']
 
-    # plt.figure(figsize=(10,10))
-    # plt.title('Predicted Vs. Actual Plot ADL model')
-    # plt.xlabel('Date')
-    # plt.ylabel('Price')
-    # plt.plot(Y_plot.index, Y_plot['Actual'], label='Actual')
-    # plt.plot(Y_plot.index, Y_plot['Predicted'],label='Predicted')
-    # plt.legend()
-
-    # plt.show()
-
     plot_data = {}
     plot_data['x_val'] = Y_plot.index
     plot_data['y_actual'] = Y_plot['Actual']
     plot_data['y_predict'] = Y_plot['Predicted']
 
     return plot_data
+
+def predict_next_value(ticker, company, model, is_ADL):
+    """ Predicts the next value given a model and ticker
+    Params:
+        ticker (String): ticker of company trying to predict
+        model (sklearn.linear_model.LinearRegression): model used to predict the data
+        is_ADL (boolean): boolean to see if is ADL or not
+    Returns:
+        predicted_value (float): Predicted value
+    """
+    # Read in however many lags
+    if is_ADL:
+        number_lags_back = len(model.coef_) - 3
+    else:
+        number_lags_back = len(model.coef_)
+    
+    # Read in 50 days back of data
+    pred_start = (datetime.datetime.now() - datetime.timedelta(days=50)).isoformat()
+    pred_end = datetime.datetime.now().isoformat()
+    dataframe = web.DataReader(ticker, 'morningstar', pred_start, pred_end)['Close']
+    dataframe = pd.Series.to_frame(dataframe)
+    dataframe.reset_index(level=0, drop=True, inplace=True)
+    dataframe.columns = ['X_t-1']
+    
+    # Add the lags
+    for i in range(number_lags_back-1):
+        dataframe['X_t-' + str(i+2)] = dataframe['X_t-1'].shift((i+1))
+        
+    # Add the sentiment values if ADL
+    if is_ADL:
+        dataframe['Pos_t-1'] = 0
+        dataframe['Neu_t-1'] = 0
+        dataframe['Neg_t-1'] = 0
+        trading_dates = dataframe.index
+        query_start = (datetime.datetime.now()-datetime.timedelta(days=3)).isoformat()
+        query_end = datetime.datetime.now().isoformat()
+        dict_master = query_news_articles(company, query_start, query_end, trading_dates, sources=all_sources, pred=True)
+        # iterate through dates
+        for date in dict_master.keys():
+            # when you enter seniment into the dataframe, use the before date not after
+            average_sentiment_dict = calculate_sentiment(dict_master[date])
+
+            # Plug this into df
+            dataframe.at[date,'Pos_t-1'] = average_sentiment_dict['pos']
+            dataframe.at[date,'Neu_t-1'] = average_sentiment_dict['neu']
+            dataframe.at[date,'Neg_t-1'] = average_sentiment_dict['neg']
+        dataframe = dataframe.fillna(0)
+    # Predict the values    
+    # print(dataframe.tail(1))
+    predicted_value = model.predict(dataframe.tail(1).values.reshape(1, -1))[0]
+    predicted_value = round(predicted_value, 2)
+    
+    return predicted_value
 
 if __name__ == "__main__":
   app.run(debug=True)
