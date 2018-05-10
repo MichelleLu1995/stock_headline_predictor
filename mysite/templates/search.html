@@ -39,25 +39,25 @@
 		    <h2>{{ predict }}</h2>
 		  </div>
 	</div>
-	<p style="text-align: center; font-weight: bold; font-size: 1.5em; padding-top: 20px">Cross Validation</p>
+	<p style="text-align: center; font-weight: bold; font-size: 1.5em; padding-top: 20px">Mean Squared Error</p>
 	<div class="row">
 		  <div class="column">
-		    <h2>Without Sentiment</h2>
+		    <h2>Without News Sentiment</h2>
 		    <canvas class="center" id="ns_bar" width="500" height="300"></canvas>
 		  </div>
 		  <div class="column">
-		    <h2>With Sentiment</h2>
+		    <h2>With News Sentiment</h2>
 		    <canvas class="center" id="s_bar" width="500" height="300"></canvas>
 		  </div>
 	</div>
-	<p style="text-align: center; font-weight: bold; font-size: 1.5em; padding-top: 20px">Model Regressions</p>
+	<p style="text-align: center; font-weight: bold; font-size: 1.5em; padding-top: 20px">Regression Models</p>
 	<div class="row">
 		  <div class="column">
-		    <h2>Without Sentiment</h2>
+		    <h2>Without News Sentiment</h2>
 		    <canvas class="center" id="ns_reg" width="500" height="300"></canvas>
 		  </div>
 		  <div class="column">
-		    <h2>With Sentiment</h2>
+		    <h2>With News Sentiment</h2>
 		    <canvas class="center" id="s_reg" width="500" height="300"></canvas>
 		  </div>
 	</div>
@@ -65,18 +65,28 @@
 	Chart.defaults.global.responsive = false;
  
 	// define the chart data
-	var chartData = {
+	var comp_AR_data = {
 	  labels : [
-          {% for item in labels %}
+          {% for item in plot_dict['comp_AR_label'] %}
            "{{ item }}",
           {% endfor %}
 		],
         datasets : [{
-        	label: '{{ legend }}',
+        	label: 'Actual',
+      		fill: false,
+      		borderColor: '#ff4c4c',
+          	data : [
+	            {% for item in plot_dict['comp_AR_actual'] %}
+	               "{{ item }}",
+	             {% endfor %}
+	    	]
+          },
+          {
+        	label: 'Predicted',
       		fill: false,
       		borderColor: '#82CAFA',
           	data : [
-	            {% for item in values %}
+	            {% for item in plot_dict['comp_AR_predict'] %}
 	               "{{ item }}",
 	             {% endfor %}
 	    	]
@@ -84,18 +94,64 @@
         ]
 	}
 
-	var barData = {
+	var comp_ADL_data = {
 	  labels : [
-          {% for item in labels_bar %}
+          {% for item in plot_dict['comp_ADL_label'] %}
            "{{ item }}",
           {% endfor %}
 		],
         datasets : [{
-        	label: '{{ legend }}',
+        	label: 'Actual',
+      		fill: false,
+      		borderColor: '#ff4c4c',
+          	data : [
+	            {% for item in plot_dict['comp_ADL_actual'] %}
+	               "{{ item }}",
+	             {% endfor %}
+	    	]
+          },
+          {
+        	label: 'Predicted',
+      		fill: false,
+      		borderColor: '#82CAFA',
+          	data : [
+	            {% for item in plot_dict['comp_ADL_predict'] %}
+	               "{{ item }}",
+	             {% endfor %}
+	    	]
+          }
+        ]
+	}
+
+	var MSE_AR_data = {
+	  labels : [
+          {% for item in plot_dict['MSE_labels'] %}
+           "{{ item }}",
+          {% endfor %}
+		],
+        datasets : [{
       		fill: false,
       		backgroundColor: '#75b5e1',
           	data : [
-	            {% for item in values_bar %}
+	            {% for item in plot_dict['MSE_AR_values'] %}
+	               "{{ item }}",
+	             {% endfor %}
+	    	]
+          }
+        ]
+	}
+
+	var MSE_ADL_data = {
+	  labels : [
+          {% for item in plot_dict['MSE_labels'] %}
+           "{{ item }}",
+          {% endfor %}
+		],
+        datasets : [{
+      		fill: false,
+      		backgroundColor: '#75b5e1',
+          	data : [
+	            {% for item in plot_dict['MSE_ADL_values'] %}
 	               "{{ item }}",
 	             {% endfor %}
 	    	]
@@ -106,22 +162,92 @@
 	var ctx = document.getElementById("s_reg").getContext("2d");
 	var s_reg = new Chart(ctx, {
 		type: 'line',
-		data: chartData,
+		data: comp_ADL_data,
+		options: {
+		  scales: {
+		    yAxes: [{
+		      scaleLabel: {
+		        display: true,
+		        labelString: 'Stock Price'
+		      }
+		    }],
+		    xAxes: [{
+		      scaleLabel: {
+		        display: true,
+		        labelString: 'Date'
+		      }
+		    }]
+		  }     
+		}
 	});
 	ctx = document.getElementById("ns_reg").getContext("2d");
 	var ns_reg = new Chart(ctx, {
 	  type: 'line',
-	  data: chartData,
+	  data: comp_AR_data,
+	  options: {
+		  scales: {
+		    yAxes: [{
+		      scaleLabel: {
+		        display: true,
+		        labelString: 'Stock Price'
+		      }
+		    }],
+		    xAxes: [{
+		      scaleLabel: {
+		        display: true,
+		        labelString: 'Date'
+		      }
+		    }]
+		  }     
+		}
 	});
 	ctx = document.getElementById("s_bar").getContext("2d");
 	var s_bar = new Chart(ctx, {
 		type: 'bar',
-		data: barData,
+		data: MSE_ADL_data,
+		options: {
+		  scales: {
+		    yAxes: [{
+		      scaleLabel: {
+		        display: true,
+		        labelString: 'Mean Squared Error'
+		      }
+		    }],
+		    xAxes: [{
+		      scaleLabel: {
+		        display: true,
+		        labelString: 'Number of Folds'
+		      }
+		    }]
+		  },
+		  legend: {
+		  	display: false
+		  }    
+		}
 	});
 	ctx = document.getElementById("ns_bar").getContext("2d");
 	var ns_bar = new Chart(ctx, {
 	  type: 'bar',
-	  data: barData,
+	  data: MSE_AR_data,
+	  options: {
+		  scales: {
+		    yAxes: [{
+		      scaleLabel: {
+		        display: true,
+		        labelString: 'Mean Squared Error'
+		      }
+		    }],
+		    xAxes: [{
+		      scaleLabel: {
+		        display: true,
+		        labelString: 'Number of Folds'
+		      }
+		    }]
+		  },
+		  legend: {
+		  	display: false
+		  }        
+		}
 	});
 </script>
 </body>
